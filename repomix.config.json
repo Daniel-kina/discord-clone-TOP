@@ -1,0 +1,19 @@
+{
+  "ignore": {
+    "customPatterns": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.git/**",
+      "backend/prisma/migrations/**",
+      ".env",
+      "**/.agents/**",
+      "**/.claude/**",
+      "**/.cursor/**",
+      "**/.devin/**",
+      "**/.devin/**",
+      "**/.windsurf/**",
+      "**/generated/**"
+    ]
+  }
+}

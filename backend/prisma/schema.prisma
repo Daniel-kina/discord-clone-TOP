@@ -1,0 +1,138 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String @id @default(uuid())
+  username     String
+  tag          String @unique
+  email        String @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+
+  groups        Group[]
+  messages      Message[]
+  serverMembers ServerMember[]
+
+  sentDmChannels     DirectMessageChannel[] @relation("DMUser1")
+  receivedDmChannels DirectMessageChannel[] @relation("DMUser2")
+
+  sentFriendships     Friends[] @relation("UserFriends")
+  receivedFriendships Friends[] @relation("UserFriendOf")
+}
+
+model Message {
+  id        String    @id @default(uuid())
+  content   String
+  createdAt DateTime  @default(now())
+  editedAt  DateTime?
+  file      String?
+  image     String?
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId String?
+
+  textChannel   TextChannel? @relation(fields: [textChannelId], references: [id], onDelete: Cascade)
+  textChannelId String?
+
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId String?
+
+  // NEU: Für Direktnachrichten (1-zu-1)
+  privateChannel   DirectMessageChannel? @relation(fields: [privateChannelId], references: [id], onDelete: Cascade)
+  privateChannelId String?
+}
+
+model Friends {
+  id String @id @default(uuid())
+
+  // Wer hat die Anfrage geschickt?
+  user   User   @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  // Wer wurde hinzugefügt?
+  friend   User   @relation("UserFriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+  friendId String
+
+  // Optional, aber sehr nützlich für später: Status der Freundschaft
+  status String @default("ACCEPTED")
+
+  // WICHTIG: Verhindert, dass dieselbe Freundschaft doppelt eingetragen wird
+  @@unique([userId, friendId])
+}
+
+model DirectMessageChannel {
+  id String @id @default(uuid())
+
+  user1   User   @relation("DMUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user1Id String
+
+  user2   User   @relation("DMUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  user2Id String
+
+  messages Message[]
+
+  @@unique([user1Id, user2Id]) // Verhindert doppelten Chat zwischen denselben zwei Usern
+}
+
+model Server {
+  id   String @id @default(uuid())
+  name String
+
+  serverMembers ServerMember[]
+  textChannels  TextChannel[]
+}
+
+model ServerMember {
+  id        String   @id @default(uuid())
+  role      String   @default("GUEST")
+  nickname  String?
+  joined_at DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  server   Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId String
+
+  @@unique([userId, serverId])
+}
+
+model TextChannel {
+  id   String @id @default(uuid())
+  name String
+
+  server   Server @relation(fields: [serverId], references: [id])
+  serverId String
+
+  category   Category? @relation(fields: [categoryId], references: [id])
+  categoryId String?
+
+  messages Message[]
+}
+
+model Category {
+  id   String @id @default(uuid())
+  name String
+
+  textChannels TextChannel[]
+}
+
+model Group {
+  id   String @id @default(uuid())
+  name String
+
+  messages Message[]
+  members  User[]
+}
