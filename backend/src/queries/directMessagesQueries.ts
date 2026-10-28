@@ -12,6 +12,15 @@ async function getDirectMessageQuery(id: string) {
         orderBy: {
           createdAt: "asc",
         },
+        // HIER IST DIE LÖSUNG:
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+        },
       },
     },
   });
@@ -56,6 +65,33 @@ async function createFriendRequestQuery(senderId: string, tag: string) {
   return friendRequest;
 }
 
-async function sendMessage(message: Message) {}
+async function sendDirectMessageQuery(
+  content: string,
+  privateChannelId: string,
+  userId: string,
+) {
+  const newMessage = await prisma.message.create({
+    data: {
+      content: content,
+      userId: userId,
+      privateChannelId: privateChannelId,
+    },
+    // Optional: Direkt den Absender mitverknüpfen, falls das Frontend den Namen/Avatar braucht
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+    },
+  });
 
-export { getDirectMessageQuery, createFriendRequestQuery };
+  return newMessage;
+}
+
+export {
+  getDirectMessageQuery,
+  createFriendRequestQuery,
+  sendDirectMessageQuery,
+};

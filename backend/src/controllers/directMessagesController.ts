@@ -3,7 +3,9 @@ import { AuthenticatedRequest } from "../types/authTypes.js";
 import {
   getDirectMessageQuery,
   createFriendRequestQuery,
+  sendDirectMessageQuery,
 } from "../queries/directMessagesQueries.js";
+import { getIo } from "../socket.js";
 
 const getDirectMessages = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -73,4 +75,51 @@ const addFriend = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export { getDirectMessages, addFriend };
+const sendDirectMessage = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Wir destrukturieren content und privateChannelId direkt aus req.body
+    const { content, privateChannelId, recipientId } = req.body;
+    const sender = req.user;
+
+    if (!sender) {
+      res.status(400).json({ error: "Kein sender angegeben." });
+      return;
+    }
+
+    if (!content || !privateChannelId || !recipientId) {
+      res.status(400).json({
+        error: "Fehlende Daten (content, channelId oder recipientId).",
+      });
+      return;
+    }
+
+    const createdMessage = await sendDirectMessageQuery(
+      content,
+      privateChannelId,
+      sender.userId,
+    );
+
+    const io = getIo();
+
+    // 2. 🔥 AN DEN AKTIVEN CHAT SENDEN (falls offen)
+    io.to(privateChannelId).emit("new_message", createdMessage);
+
+    // 3. 🔥 AN DEN EMPFÄNGER GLOBAL SENDEN (für Sidebar / Benachrichtigung)
+    io.to(`user:${recipientId}`).emit("global_dm_notification", {
+      privateChannelId,
+      message: createdMessage,
+    });
+
+    res.status(201).json({
+      message: "Erfolgreich verschickt.",
+      data: createdMessage,
+    });
+  } catch (error: any) {
+    console.error("Send DirectMessage Error:", error);
+    res.status(400).json({
+      error: error.message || "Fehler beim Senden der Direktnachricht.",
+    });
+  }
+};
+
+export { getDirectMessages, addFriend, sendDirectMessage };

@@ -3,6 +3,7 @@ import express from "express";
 import {
   getDirectMessages,
   addFriend,
+  sendDirectMessage,
 } from "../controllers/directMessagesController.js";
 
 const messagesRouter = express.Router();
@@ -13,6 +14,8 @@ messagesRouter.get(
   getDirectMessages,
 );
 
-messagesRouter.post("/addFriend/:friendTag", addFriend);
+messagesRouter.post("/send", verifyToken, sendDirectMessage);
+
+messagesRouter.post("/addFriend/:friendTag", verifyToken, addFriend);
 
 export { messagesRouter };
